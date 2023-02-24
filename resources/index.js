@@ -26,11 +26,11 @@ exports.handler = (event, context, callback) => {
     resizingOptions.height = parseInt(params.get('height'));
   }
 
-  var region_ = request.origin.s3.region;
-
-  var s3 = new aws.S3({'region': region_});
-
   if(request.origin.s3){
+
+    var region_ = request.origin.s3.region;
+
+    var s3 = new aws.S3({'region': region_});
 
     var originname = request.origin.s3.domainName;
 
