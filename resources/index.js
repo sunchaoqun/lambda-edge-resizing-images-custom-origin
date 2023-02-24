@@ -15,6 +15,7 @@ exports.handler = (event, context, callback) => {
   
   var resizingOptions = {};
   const params = new URLSearchParams(request.querystring);
+
   if (!params.has('width') || !params.has('format')) {
     // if there is no width parameter, just pass the request
     console.log("no params");
@@ -51,39 +52,7 @@ exports.handler = (event, context, callback) => {
           const binary = Buffer.concat(chunks);
           try {
             // Generate a response with resized image
-            Sharp(binary)
-              .resize(resizingOptions)
-              .toFormat(params.get('format'))
-              .toBuffer()
-              .then(output => {
-                const base64String = output.toString('base64');
-                console.log("Length of response :%s", base64String.length);
-                if (base64String.length > 1048576) {
-                  //Resized filesize payload is greater than 1 MB.Returning original image
-                  console.error('Resized filesize payload is greater than 1 MB.Returning original image');
-                  callback(null, request);
-                  return;
-                }
-  
-                const response = {
-                  status: '200',
-                  statusDescription: 'OK',
-                  headers: {
-                    'cache-control': [{
-                      key: 'Cache-Control',
-                      value: 'max-age=86400'
-                    }],
-                    'content-type': [{
-                      key: 'Content-Type',
-                      value: 'image/' + params.get('format')
-                    }]
-                  },
-                  bodyEncoding: 'base64',
-                  body: base64String
-                };
-  
-                callback(null, response);
-              });
+            handleSharp(binary,callback);
           } catch (err) {
             // Image resize error
             console.error(err);
@@ -122,40 +91,7 @@ exports.handler = (event, context, callback) => {
           }
           const binary = Buffer.concat(chunks);
           try {
-            // Generate a response with resized image
-            Sharp(binary)
-              .resize(resizingOptions)
-              .toFormat(params.get('format'))
-              .toBuffer()
-              .then(output => {
-                const base64String = output.toString('base64');
-                console.log("Length of response :%s", base64String.length);
-                if (base64String.length > 1048576) {
-                  //Resized filesize payload is greater than 1 MB.Returning original image
-                  console.error('Resized filesize payload is greater than 1 MB.Returning original image');
-                  callback(null, request);
-                  return;
-                }
-
-                const response = {
-                  status: '200',
-                  statusDescription: 'OK',
-                  headers: {
-                    'cache-control': [{
-                      key: 'Cache-Control',
-                      value: 'max-age=86400'
-                    }],
-                    'content-type': [{
-                      key: 'Content-Type',
-                      value: 'image/' + params.get('format')
-                    }]
-                  },
-                  bodyEncoding: 'base64',
-                  body: base64String
-                };
-
-                callback(null, response);
-              });
+            handleSharp(binary,callback);
           } catch (err) {
             // Image resize error
             console.error(err);
@@ -168,4 +104,44 @@ exports.handler = (event, context, callback) => {
     req.end()
   }
 
+  function handleSharp(binary,callback){
+    // Generate a response with resized image
+    Sharp(binary)
+    .resize(resizingOptions)
+    .toFormat(params.get('format'))
+    .toBuffer()
+    .then(output => {
+      const base64String = output.toString('base64');
+      console.log("Length of response :%s", base64String.length);
+      if (base64String.length > 1048576) {
+        //Resized filesize payload is greater than 1 MB.Returning original image
+        console.error('Resized filesize payload is greater than 1 MB.Returning original image');
+        callback(null, request);
+        return;
+      }
+
+      const response = {
+        status: '200',
+        statusDescription: 'OK',
+        headers: {
+          'cache-control': [{
+            key: 'Cache-Control',
+            value: 'max-age=86400'
+          }],
+          'content-type': [{
+            key: 'Content-Type',
+            value: 'image/' + params.get('format')
+          }]
+        },
+        bodyEncoding: 'base64',
+        body: base64String
+      };
+
+      callback(null, response);
+    });
+  }
 }
+
+
+
+
