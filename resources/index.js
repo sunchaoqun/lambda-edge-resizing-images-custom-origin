@@ -29,16 +29,23 @@ exports.handler = (event, context, callback) => {
 
   if(request.origin.s3){
 
+    var region_ = request.origin.s3.region;
+
     var originname = request.origin.s3.domainName;
 
-    var subDomain = originname.split('.');
+    var s3DomainEnd = '.s3' + '.' + region_ + '.amazonaws.com';
 
-    if (subDomain.length < 2) {
+    console.log(originname.indexOf(s3DomainEnd));
+
+    if (!originname.indexOf(s3DomainEnd)>0) {
       callback(null, request);
       return;
     }
+
     
-    var _bucket = subDomain[0];
+    
+    
+    var _bucket = originname.replace(s3DomainEnd, '');
     var _key = request.uri.replace(/\//, '');
 
     console.log(_bucket);
