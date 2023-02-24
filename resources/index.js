@@ -3,7 +3,6 @@
 const https = require('https');
 const Sharp = require('sharp');
 const aws = require('aws-sdk');
-var s3 = new aws.S3();
 
 const keepAliveAgent = new https.Agent({ keepAlive: true });
 
@@ -27,9 +26,11 @@ exports.handler = (event, context, callback) => {
     resizingOptions.height = parseInt(params.get('height'));
   }
 
-  if(request.origin.s3){
+  var region_ = request.origin.s3.region;
 
-    var region_ = request.origin.s3.region;
+  var s3 = new aws.S3({'region': region_});
+
+  if(request.origin.s3){
 
     var originname = request.origin.s3.domainName;
 
@@ -42,9 +43,6 @@ exports.handler = (event, context, callback) => {
       return;
     }
 
-    
-    
-    
     var _bucket = originname.replace(s3DomainEnd, '');
     var _key = request.uri.replace(/\//, '');
 
