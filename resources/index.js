@@ -94,12 +94,16 @@ exports.handler = (event, context, callback) => {
                 };
   
                 callback(null, response);
+              }).catch(sharpErr =>{
+                console.log("sharpErr S3: ", sharpErr);
+                callback(null, request);
+                return; 
               });
           } catch (err) {
             // Image resize error
             console.error(err);
             callback(null, request);
-          } finally {
+            return;
           }
         }).send();
     }
@@ -164,8 +168,11 @@ exports.handler = (event, context, callback) => {
                   bodyEncoding: 'base64',
                   body: base64String
                 };
-
                 callback(null, response);
+              }).catch(sharpErr =>{
+                console.log("sharpErr CF: ", sharpErr);
+                callback(null, request);
+                return; 
               });
           } catch (err) {
             // Image resize error
