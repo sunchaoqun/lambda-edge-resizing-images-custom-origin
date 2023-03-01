@@ -30,13 +30,9 @@ exports.handler = (event, context, callback) => {
 
     var region_ = request.origin.s3.region;
 
-    var s3 = new aws.S3({'region': region_});
-
     var originname = request.origin.s3.domainName;
 
     var s3DomainEnd = '.s3' + '.' + region_ + '.amazonaws.com';
-
-    console.log(originname.indexOf(s3DomainEnd));
 
     if (!originname.indexOf(s3DomainEnd)>0) {
       callback(null, request);
@@ -49,63 +45,19 @@ exports.handler = (event, context, callback) => {
     console.log(_bucket);
     console.log(_key);
 
+    var remainingTimeInMillis = context.getRemainingTimeInMillis() - 100;
+
+    console.log("RemainingTimeInMillis: %s", remainingTimeInMillis);
+
     if ((_bucket) && (_key)){
-  
-        let chunks = [];
-  
-        s3.getObject({
-          Bucket: _bucket, 
-          Key: _key
-        }).on('httpData', function (chunk) {
-          chunks.push(Buffer.from(chunk, 'binary'));
-        }).on('httpDone', function () {
-          const binary = Buffer.concat(chunks);
-          try {
-            // Generate a response with resized image
-            Sharp(binary)
-              .resize(resizingOptions)
-              .toFormat(params.get('format'))
-              .toBuffer()
-              .then(output => {
-                const base64String = output.toString('base64');
-                console.log("Length of response :%s", base64String.length);
-                if (base64String.length > 1048576) {
-                  //Resized filesize payload is greater than 1 MB.Returning original image
-                  console.error('Resized filesize payload is greater than 1 MB.Returning original image');
-                  callback(null, request);
-                  return;
-                }
-  
-                const response = {
-                  status: '200',
-                  statusDescription: 'OK',
-                  headers: {
-                    'cache-control': [{
-                      key: 'Cache-Control',
-                      value: 'max-age=86400'
-                    }],
-                    'content-type': [{
-                      key: 'Content-Type',
-                      value: 'image/' + params.get('format')
-                    }]
-                  },
-                  bodyEncoding: 'base64',
-                  body: base64String
-                };
-  
-                callback(null, response);
-              }).catch(sharpErr =>{
-                console.log("sharpErr S3: ", sharpErr);
-                callback(null, request);
-                return; 
-              });
-          } catch (err) {
-            // Image resize error
-            console.error(err);
-            callback(null, request);
-            return;
-          }
-        }).send();
+      context.callbackWaitsForEmptyEventLoop = false
+      setTimeout(()=>{
+        console.log("Sharp transform the image timeout");
+        callback(null, request);
+        return;
+      }, remainingTimeInMillis);
+
+      s3Sharp(_bucket,_key,region_);
     }
   } else {
     var originname = request.origin.custom.domainName;
@@ -144,7 +96,7 @@ exports.handler = (event, context, callback) => {
               .toBuffer()
               .then(output => {
                 const base64String = output.toString('base64');
-                console.log("Length of response :%s", base64String.length);
+                console.log("Length of response:%s ", base64String.length);
                 if (base64String.length > 1048576) {
                   //Resized filesize payload is greater than 1 MB.Returning original image
                   console.error('Resized filesize payload is greater than 1 MB.Returning original image');
@@ -186,4 +138,65 @@ exports.handler = (event, context, callback) => {
     req.end()
   }
 
+  function s3Sharp(_bucket,_key,region_){
+    
+    var s3 = new aws.S3({'region': region_});
+
+    let chunks = [];
+    
+    s3.getObject({
+      Bucket: _bucket, 
+      Key: _key
+    }).on('httpData', function (chunk) {
+      chunks.push(Buffer.from(chunk, 'binary'));
+    }).on('httpDone', function () {
+      const binary = Buffer.concat(chunks);
+      try {
+        // Generate a response with resized image
+        Sharp(binary)
+          .resize(resizingOptions)
+          .toFormat(params.get('format'))
+          .toBuffer()
+          .then(output => {
+            const base64String = output.toString('base64');
+            console.log("Length of response :%s", base64String.length);
+            if (base64String.length > 1048576) {
+              //Resized filesize payload is greater than 1 MB.Returning original image
+              console.error('Resized filesize payload is greater than 1 MB.Returning original image');
+              callback(null, request);
+              return;
+            }
+  
+            const response = {
+              status: '200',
+              statusDescription: 'OK',
+              headers: {
+                'cache-control': [{
+                  key: 'Cache-Control',
+                  value: 'max-age=86400'
+                }],
+                'content-type': [{
+                  key: 'Content-Type',
+                  value: 'image/' + params.get('format')
+                }]
+              },
+              bodyEncoding: 'base64',
+              body: base64String
+            };
+  
+            callback(null, response);
+          }).catch(sharpErr =>{
+            console.log("sharpErr S3: ", sharpErr);
+            callback(null, request);
+            return; 
+          });
+      } catch (err) {
+        // Image resize error
+        console.error(err);
+        callback(null, request);
+        return;
+      }
+    }).send();
+  }
+  
 }
