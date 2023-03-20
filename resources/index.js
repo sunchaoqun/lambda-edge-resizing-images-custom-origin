@@ -27,19 +27,21 @@ exports.handler = (event, context, callback) => {
   }
 
   if(request.origin.s3){
-
-    var originname = request.origin.s3.domainName;
-
-    var region_ = request.origin.s3.region;
-
     const PRE = ".s3";
     const END = ".amazonaws.com";
+
+    var originname = request.origin.s3.domainName;
+    var region_ = request.origin.s3.region;
 
     if(!region_){
       region_ = originname.slice(originname.lastIndexOf(PRE) + 4,originname.lastIndexOf(END));
     }
 
     var s3DomainEnd = PRE + '.' + region_ + END;
+
+    if(originname.endsWith(PRE+END)){
+      s3DomainEnd = PRE+END;
+    }
 
     if (!originname.indexOf(s3DomainEnd)>0) {
       callback(null, request);
